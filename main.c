@@ -142,9 +142,9 @@ int rec_finishframe (struct PlayerRecording *rec)
 		return 0;
 	}
 	int ret = 0;
-	if (gr_is_pressed ('t'))
+	if (gr_is_pressed_debounce ('t'))
 		ret = 2;
-	else if (gr_is_pressed (GRK_RET))
+	else if (gr_is_pressed_debounce (GRK_RET))
 		ret = 3;
 	// if there is a prev frame, and it has the same # of held keys as the current one,
 	// and no different ones, then they are the same set of keys (not necessarily same order)
