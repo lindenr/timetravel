@@ -330,8 +330,12 @@ void draw_level (struct LevelState *ls)
 	int w, x, y;
 	char *level = ls->level;
 	int levelw = ls->levelw;
-	for (w = 0; w < gr_pa; ++ w)
-		gr_pixels[w] = PIXEL_VALUE(255,255,w<gr_pa/2?255-2*(w/gr_pw*255)/gr_ph:0);
+	for (y = 0; y < gr_ph; ++ y)
+    {
+        int colour = PIXEL_VALUE(255,255,y<gr_ph/2 ? 255-2*(y*255)/gr_ph : 0);
+        for (x = 0; x < gr_pw; ++ x)
+            gr_pixels[y*gr_pw + x] = colour;
+    }
 	for (w = 0; level[w]; ++ w)
 	{
 		int L = (w%levelw)*blockwidth, R = L + blockwidth,
