@@ -319,10 +319,8 @@ int next_player_state (struct LevelState *ls, struct PlayerState *ps)
 	// collisions and input:
 	check_collisions (ps, ls);
 	int state = rec_finishframe (rec);
-	// match ending pos+vel of current with starting pos+vel of next player for consistency: 
-	if (state == 1)
-	{
-	}
+	if (state == 3 && ls->level[b] != '*')
+		state = 0;
 	return state;
 }
 
@@ -350,6 +348,8 @@ void draw_level (struct LevelState *ls)
 			val = PIXEL_VALUE(0, 200, 150);
 		else if (level[w] == 's')
 			val = PIXEL_VALUE(255, 0, 0);
+		else if (level[w] == '*')
+			val = PIXEL_VALUE(255, 200, 0);
 		else
 			continue;
 		for (y = 0; y < blockwidth; ++ y) for (x = 0; x < blockwidth; ++ x)
@@ -471,7 +471,7 @@ void setup1 ()
 	initlevel =
 	"aaaaaaaaaaa"
 	"aaaaaaaaaaa"
-	"aaaalaaaala"
+	"aaaalaaaal*"
 	"ggaagggaagg"
 	"ggssgggssgg"
 	"ggggggggggg";
@@ -493,7 +493,7 @@ void setup2 ()
 	"aaaaaaaaaaaaa"
 	"aaaaaaaaaaaaa"
 	"aaaaagaaaaaaa"
-	"aaaalgaaaaala"
+	"aaaalgaaaaal*"
 	"gaaaggaagaagg"
 	"ggaaaaaggssgg"
 	"ggggggggggggg";
@@ -515,7 +515,7 @@ void setup3 ()
 	initlevel =
 	"aaaaaaaaaaa"
 	"aaaaaaaaaaa"
-	"aaaalaaaaaa"
+	"aaaalaaaaa*
 	"ggaaggggggg"
 	"ggssgggssgg"
 	"ggggggggggg";
