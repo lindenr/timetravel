@@ -232,7 +232,8 @@ void check_collisions (struct PlayerState *ps, struct LevelState *ls)
 	{
 		ps->ply += yproj;
 		ps->plyv = 0;
-		ps->on_ground = 1;
+		if (yproj < 0)
+			ps->on_ground = 1;
 	}
 }
 
