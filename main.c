@@ -482,6 +482,27 @@ const char *initlevel, *control;
 int levelw;
 float i_plx, i_ply;
 
+void setup0 ()
+{
+	initlevel =
+	"aaaaaa"
+	"aaaaaa"
+	"aaaal*"
+	"ggaagg"
+	"ggssgg"
+	"gggggg";
+	control =
+	"000000"
+	"000000"
+	"000010"
+	"001100"
+	"000000"
+	"000000";
+	levelw = 6;
+	i_plx = 100;
+	i_ply = 100;
+}
+
 void setup1 ()
 {
 	initlevel =
@@ -594,6 +615,9 @@ int repeatlevel ()
 int main ()
 {
 	gr_init (720, 1300);
+	setup0 ();
+	if (!repeatlevel ())
+		return 0;
 	setup1 ();
 	if (!repeatlevel ())
 		return 0;
