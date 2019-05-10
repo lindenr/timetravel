@@ -395,14 +395,17 @@ void new_player (struct LevelState *ls, const struct PlayerState *ps, int frame)
  * 1: playerless playback, and no players extant: success!
  * 2: player time travelled back;
  * 3: player finished level */
-int run_through_from_start (struct LevelState *ls)
+int run_through_from_start (struct LevelState *ls, int can_remote)
 {
 	while (1) // loop through all frames
 	{
-		if (gr_is_pressed_debounce ('1'))
-			ls_toggle_ctrl (ls, '1');
-		if (gr_is_pressed_debounce ('2'))
-			ls_toggle_ctrl (ls, '2');
+		if (can_remote)
+		{
+			if (gr_is_pressed_debounce ('1'))
+				ls_toggle_ctrl (ls, '1');
+			if (gr_is_pressed_debounce ('2'))
+				ls_toggle_ctrl (ls, '2');
+		}
 		if (gr_is_pressed(GRK_ESC))
 			return 0; // quit
 		if (gr_is_pressed('r'))
@@ -515,7 +518,7 @@ void setup3 ()
 	initlevel =
 	"aaaaaaaaaaa"
 	"aaaaaaaaaaa"
-	"aaaalaaaaa*
+	"aaaalaaaaa*"
 	"ggaaggggggg"
 	"ggssgggssgg"
 	"ggggggggggg";
@@ -540,7 +543,7 @@ int playlevel ()
 	while (state != 3) // while not finished level
 	{
 		new_player (ls, &ips, 0); // make new player with given starting params
-		state = run_through_from_start (ls); // play thru with all players
+		state = run_through_from_start (ls, 1); // play thru with all players
 		if (state <= 0) // -1 restart level, or 0 quit game
 		{
 			ls_free (ls);
@@ -559,7 +562,7 @@ int playlevel ()
 	}
 	// state == 3, level finished; everything reset
 	// final fully-recorded runthrough to check consistency:
-	state = run_through_from_start (ls); // -1 restart (paradox); 0 quit; 1 success
+	state = run_through_from_start (ls, 0); // -1 restart (paradox); 0 quit; 1 success
 	ls_free (ls); // clean up
 	return state;
 }
