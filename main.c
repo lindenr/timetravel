@@ -55,6 +55,21 @@ struct LevelState *ls_init (const char *level, const char *ctrl, int levelw)
 	return ls;
 }
 
+void ls_free (struct LevelState *ls)
+{
+	free (ls->level);
+	free (ls->initlevel);
+	free (ls->ctrl);
+	int i;
+	for (i = 0; i < ls->player_states->len; ++ i)
+	{
+		struct PlayerState *ps = v_at (ls->player_states, i);
+		v_free (ps->rec.inputs);
+	}
+	v_free (ls->player_states);
+	free (ls);
+}
+
 // whether controlled by player or recording is transparent to caller
 int rec_isdown_aux (struct PlayerRecording *rec, char c, int (*pressed)(char))
 {
@@ -525,7 +540,10 @@ int playlevel ()
 		new_player (ls, &ips, 0); // make new player with given starting params
 		state = run_through_from_start (ls); // play thru with all players
 		if (state <= 0) // -1 restart level, or 0 quit game
+		{
+			ls_free (ls);
 			return state;
+		}
 		
 		// next inital player state is current (live) player's final state:
 		struct PlayerState *ps = v_at (ls->player_states, ls->player_states->len - 1);
@@ -539,7 +557,9 @@ int playlevel ()
 	}
 	// state == 3, level finished; everything reset
 	// final fully-recorded runthrough to check consistency:
-	return run_through_from_start (ls); // -1 restart (paradox); 0 quit; 1 success
+	state = run_through_from_start (ls); // -1 restart (paradox); 0 quit; 1 success
+	ls_free (ls); // clean up
+	return state;
 }
 
 int repeatlevel ()
