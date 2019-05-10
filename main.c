@@ -404,7 +404,9 @@ int run_through_from_start (struct LevelState *ls)
 		if (gr_is_pressed_debounce ('2'))
 			ls_toggle_ctrl (ls, '2');
 		if (gr_is_pressed(GRK_ESC))
-			return 0;
+			return 0; // quit
+		if (gr_is_pressed('r'))
+			return -1; // reset
 
 		// most recent player is currently player, camera follows them:
 		struct PlayerState *ps = v_at (ls->player_states, ls->player_states->len-1);
