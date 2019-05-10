@@ -1,1 +1,3 @@
 To compile: gcc $(sdl2-config --cflags --libs) *.c -o out -funsigned-char
+
+Controls: WASD for movement, T to time travel back to the start (nowhere else), '.' to interact with levers (bluish squares) and numbers 1,2,... to remotely interact with levers ("contracts")
