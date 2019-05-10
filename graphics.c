@@ -68,14 +68,14 @@ static int gr_not_seen_up[256] = {0,};
 
 int gr_is_pressed (char in)
 {
-	return gr_down_keys[in];
+	return gr_down_keys[(int)in];
 }
 
 int gr_is_pressed_debounce (char in)
 {
-	if (gr_down_keys[in] && !gr_not_seen_up[in])
+	if (gr_down_keys[(int)in] && !gr_not_seen_up[(int)in])
 	{
-		gr_not_seen_up[in] = 1;
+		gr_not_seen_up[(int)in] = 1;
 		return 1;
 	}
 	return 0;
@@ -137,9 +137,9 @@ void gr_update_events ()
 		}
 		if (input_key)
 		{
-			gr_down_keys[input_key] = !gr_down_keys[input_key];
-			if (gr_down_keys[input_key])
-				gr_not_seen_up[input_key] = 0;
+			gr_down_keys[(int)input_key] = !gr_down_keys[(int)input_key];
+			if (gr_down_keys[(int)input_key])
+				gr_not_seen_up[(int)input_key] = 0;
 		}
 	}
 }
