@@ -2,7 +2,7 @@
 #include "vector.h"
 #include <math.h>
 
-const int blockwidth = 120, maxvel = 18;
+const float blockwidth = 120, maxvel = 18;
 
 #define MAX_SIMULTANEOUS_KEYS 10
 
@@ -15,7 +15,7 @@ struct Keys
 
 struct PlayerRecording
 {
-	int i_plx, i_ply, i_plxv, i_plyv; // pos+velocity at start of recording
+	float i_plx, i_ply, i_plxv, i_plyv; // pos+velocity at start of recording
 	int start; // start frame (always 0?)
 	Vector inputs; // vector of struct Keys
 	char prevheld[MAX_SIMULTANEOUS_KEYS], held[MAX_SIMULTANEOUS_KEYS]; // current and previous frame keys
@@ -26,9 +26,9 @@ struct PlayerRecording
 
 struct PlayerState
 {
-	int plx, ply, plxv, plyv; // pos+velocity
+	float plx, ply, plxv, plyv; // pos+velocity
 	int on_ground; // can jump
-	int plw; // width (and height) of player
+	float plw; // width (and height) of player
 	int extant; // currently in play
 	struct PlayerRecording rec; // where to record keystrokes to/read from
 };
@@ -39,7 +39,7 @@ struct LevelState
 	char *level, *initlevel; // current and inital state of level
 	char *ctrl; // what levers control what squares
 	int levelw, levelh; // level dimensions
-	int camx, camy; // camera location (pixels)
+	float camx, camy; // camera location (pixels)
 	Vector player_states; // all players' states
 };
 
@@ -168,12 +168,18 @@ int rec_finishframe (struct PlayerRecording *rec)
 	return ret;
 }
 
+int block (float x, float y, int levelw)
+{
+	return (int)x/blockwidth + levelw*(int)(y/blockwidth);
+}
+
 // jiggle players and their velocities to stop overlaps between player and level
 void check_collisions (struct PlayerState *ps, struct LevelState *ls)
 {
 	int levelw = ls->levelw;
 	char *level = ls->level;
-	int plw = ps->plw, levelh = ls->levelh;
+	float plw = ps->plw;
+	int levelh = ls->levelh;
 	if (ps->plx < 0)
 	{
 		ps->plx = 0;
@@ -196,17 +202,19 @@ void check_collisions (struct PlayerState *ps, struct LevelState *ls)
 		ps->on_ground = 1;
 	}
 
-	int xover = ps->plx%blockwidth + plw > blockwidth;
-	int yover = ps->ply%blockwidth + plw > blockwidth;
-	int b = ps->plx/blockwidth + levelw*(ps->ply/blockwidth); // within level[]
+	int xover = fmod(ps->plx, blockwidth) + plw > blockwidth;
+	int yover = fmod(ps->ply, blockwidth) + plw > blockwidth;
+	int b = block (ps->plx, ps->ply, levelw);
+	if (gr_is_pressed_debounce ('h'))
+		fprintf (stderr, "%f %f %d\n", ps->plx, ps->ply, b);
 #define L(b) (level[b] == 'g')
 	int A = L(b), B = (xover && L(b+1)),
 		C = (yover && L(b+levelw)), D = (xover && yover && L(b+levelw+1));
 #undef L
 
 	int shouldprojx = 0, shouldprojy = 0;
-	int xproj = ((ps->plxv < 0) ? plw : 0) - (ps->plx + plw)%blockwidth;
-	int yproj = ((ps->plyv < 0) ? plw : 0) - (ps->ply + plw)%blockwidth;
+	float xproj = ((ps->plxv < 0) ? plw : 0) - fmod (ps->plx + plw, blockwidth);
+	float yproj = ((ps->plyv < 0) ? plw : 0) - fmod (ps->ply + plw, blockwidth);
 	if (A && B && C && D)
 		return;
 	else if (A+B+C+D == 0)
@@ -294,7 +302,7 @@ void ls_lever (struct LevelState *ls, int b)
 int next_player_state (struct LevelState *ls, struct PlayerState *ps)
 {
 	ps->plxv = 0;
-	int b = ps->plx/blockwidth + ls->levelw*(ps->ply/blockwidth); // location
+	int b = block (ps->plx, ps->ply, ls->levelw); // location
 	if (ls->level[b] == 's') // on spikes; die
 		return -1;
 	// deal with input:
@@ -338,7 +346,7 @@ void draw_level (struct LevelState *ls)
 	}
 	for (w = 0; level[w]; ++ w)
 	{
-		int L = (w%levelw)*blockwidth, R = L + blockwidth,
+		float L = (w%levelw)*blockwidth, R = L + blockwidth,
 			U = (w/levelw)*blockwidth, D = U + blockwidth;
 		if (L >= ls->camx + gr_pw || R < ls->camx ||
 			U >= ls->camy + gr_ph || D < ls->camy)
@@ -471,7 +479,8 @@ void ps_reset (struct PlayerState *ps)
 }
 
 const char *initlevel, *control;
-int levelw, i_plx, i_ply;
+int levelw;
+float i_plx, i_ply;
 
 void setup1 ()
 {
