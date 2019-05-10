@@ -1,0 +1,1 @@
+To compile: gcc $(sdl2-config --cflags --libs) *.c -o out -funsigned-char
