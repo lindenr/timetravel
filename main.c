@@ -406,9 +406,9 @@ int run_through_from_start (struct LevelState *ls, int can_remote)
 			if (gr_is_pressed_debounce ('2'))
 				ls_toggle_ctrl (ls, '2');
 		}
-		if (gr_is_pressed(GRK_ESC))
+		if (gr_is_pressed_debounce (GRK_ESC))
 			return 0; // quit
-		if (gr_is_pressed('r'))
+		if (gr_is_pressed_debounce ('r'))
 			return -1; // reset
 
 		// most recent player is currently player, camera follows them:
