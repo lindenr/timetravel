@@ -63,3 +63,4 @@ void gr_resize    (int, int);
 
 #endif /* GRAPHICS_H_INCLUDED */
 
+/* vim: set noexpandtab ts=4 sts=4 sw=4 : */

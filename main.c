@@ -331,11 +331,11 @@ void draw_level (struct LevelState *ls)
 	char *level = ls->level;
 	int levelw = ls->levelw;
 	for (y = 0; y < gr_ph; ++ y)
-    {
-        int colour = PIXEL_VALUE(255,255,y<gr_ph/2 ? 255-2*(y*255)/gr_ph : 0);
-        for (x = 0; x < gr_pw; ++ x)
-            gr_pixels[y*gr_pw + x] = colour;
-    }
+	{
+		int colour = PIXEL_VALUE(255,255,y<gr_ph/2 ? 255-2*(y*255)/gr_ph : 0);
+		for (x = 0; x < gr_pw; ++ x)
+			gr_pixels[y*gr_pw + x] = colour;
+	}
 	for (w = 0; level[w]; ++ w)
 	{
 		int L = (w%levelw)*blockwidth, R = L + blockwidth,
@@ -596,3 +596,4 @@ int main ()
 		return 0;
 }
 
+/* vim: set noexpandtab ts=4 sts=4 sw=4 : */
