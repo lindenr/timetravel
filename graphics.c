@@ -403,3 +403,4 @@ uint32_t gr_getms ()
 	return SDL_GetTicks ();
 }
 
+/* vim: set noexpandtab ts=4 sts=4 sw=4 : */

@@ -81,3 +81,4 @@ int v_isin (Vector vec, void *data)
 	return 0;
 }
 
+/* vim: set noexpandtab ts=4 sts=4 sw=4 : */

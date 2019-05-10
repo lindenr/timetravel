@@ -31,3 +31,4 @@ void    v_print (Vector);
 
 #endif /* VECTOR_H_INCLUDED */
 
+/* vim: set noexpandtab ts=4 sts=4 sw=4 : */
