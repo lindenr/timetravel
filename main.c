@@ -270,7 +270,7 @@ void ls_lever (struct LevelState *ls, int b)
 
 /* moves player/toggles levers etc according to input, then adjusts for collisions and finishes input
  * return values:
- * -1: dead, complete restart;
+ * -1: dead or paradox, complete restart;
  * 0: normal, continue;
  * 1: finished replay;
  * 2: travelled back or left level
@@ -300,8 +300,14 @@ int next_player_state (struct LevelState *ls, struct PlayerState *ps)
 	ps->plx += ps->plxv;
 	ps->ply += ps->plyv;
 	ps->on_ground = 0;
+	// collisions and input:
 	check_collisions (ps, ls);
-	return rec_finishframe (rec);
+	int state = rec_finishframe (rec);
+	// match ending pos+vel of current with starting pos+vel of next player for consistency: 
+	if (state == 1)
+	{
+	}
+	return state;
 }
 
 #define PIXEL_VALUE(a,b,c) (((a)<<16) | ((b)<<8) | ((c)<<0) | 0xFF000000)
@@ -367,6 +373,12 @@ void new_player (struct LevelState *ls, const struct PlayerState *ps, int frame)
 	v_push (ls->player_states, &ps1);
 }
 
+/* return values:
+ * -1: dead, restart level;
+ * 0: quit entirely;
+ * 1: playerless playback, and no players extant: success!
+ * 2: player time travelled back;
+ * 3: player finished level */
 int run_through_from_start (struct LevelState *ls)
 {
 	while (1) // loop through all frames
@@ -402,13 +414,21 @@ int run_through_from_start (struct LevelState *ls)
 				continue;
 			++ num_ext;
 			int state = next_player_state (ls, ps);
+			if (state == 1 && i < ls->player_states->len - 1)
+			{
+				// check matching pos+vel for end of cur player and start of next
+				struct PlayerState *nps = v_at (ls->player_states, i+1);
+				if (ps->plx != nps->rec.i_plx || ps->ply != nps->rec.i_ply ||
+					ps->plxv != nps->rec.i_plxv || ps->plyv != nps->rec.i_plyv)
+					return -1; // paradox!
+			}
 			if (state > 0)
 				ps->extant = 0;
 			if (state == -1 || state == 2 || state == 3)
 				return state;
 		}
 		if (!num_ext) // no players left
-			return -1;
+			return 1;
 	}
 }
 
@@ -416,6 +436,7 @@ int run_through_from_start (struct LevelState *ls)
 void ps_reset (struct PlayerState *ps)
 {
 	ps->rec.curinput = 0;
+	ps->rec.curframe = 0;
 	ps->plx = ps->rec.i_plx;
 	ps->ply = ps->rec.i_ply;
 	ps->plxv = ps->rec.i_plxv;
@@ -424,32 +445,86 @@ void ps_reset (struct PlayerState *ps)
 	ps->extant = 1;
 }
 
-int game ()
+const char *initlevel, *control;
+int levelw, i_plx, i_ply;
+
+void setup1 ()
 {
-	const char initlevel[] =
+	initlevel =
 	"aaaaaaaaaaa"
 	"aaaaaaaaaaa"
 	"aaaalaaaala"
 	"ggaagggaagg"
 	"ggssgggssgg"
 	"ggggggggggg";
-	const char control[] =
+	control =
 	"00000000000"
 	"00000000000"
 	"00001000020"
 	"00110002200"
 	"00000000000"
 	"00000000000";
-	struct LevelState *ls = ls_init (initlevel, control, 11); // set up level
-	struct PlayerState ips = {100, 100, 0, 0, }; // initial player pos+vel
+	levelw = 11;
+	i_plx = 100;
+	i_ply = 100;
+}
+
+void setup2 ()
+{
+	initlevel =
+	"aaaaaaaaaaaaa"
+	"aaaaaaaaaaaaa"
+	"aaaaagaaaaaaa"
+	"aaaalgaaaaala"
+	"gaaaggaagaagg"
+	"ggaaaaaggssgg"
+	"ggggggggggggg";
+	control =
+	"0000000000000"
+	"0000000000000"
+	"0000000000000"
+	"0000100000020"
+	"0002000001100"
+	"0000000000000"
+	"0000000000000";
+	levelw = 13;
+	i_plx = 50;
+	i_ply = 220;
+}
+
+void setup3 ()
+{
+	initlevel =
+	"aaaaaaaaaaa"
+	"aaaaaaaaaaa"
+	"aaaalaaaaaa"
+	"ggaaggggggg"
+	"ggssgggssgg"
+	"ggggggggggg";
+	control =
+	"00000000000"
+	"00000000000"
+	"00001000000"
+	"00110001100"
+	"00000000000"
+	"00000000000";
+	levelw = 11;
+	i_plx = 100;
+	i_ply = 100;
+}
+
+int playlevel ()
+{
+	struct LevelState *ls = ls_init (initlevel, control, levelw); // set up level
+	struct PlayerState ips = {i_plx, i_ply, 0, 0, }; // initial player pos+vel
 
 	int state = 0;
 	while (state != 3) // while not finished level
 	{
 		new_player (ls, &ips, 0); // make new player with given starting params
 		state = run_through_from_start (ls); // play thru with all players
-		if (state <= 0)
-			return state; // finished
+		if (state <= 0) // -1 restart level, or 0 quit game
+			return state;
 		
 		// next inital player state is current (live) player's final state:
 		struct PlayerState *ps = v_at (ls->player_states, ls->player_states->len - 1);
@@ -463,13 +538,31 @@ int game ()
 	}
 	// state == 3, level finished; everything reset
 	// final fully-recorded runthrough to check consistency:
-	return run_through_from_start (ls);
+	return run_through_from_start (ls); // -1 restart (paradox); 0 quit; 1 success
+}
+
+int repeatlevel ()
+{
+	int status;
+	while (1)
+	{
+		status = playlevel ();
+		if (status >= 0)
+			return status;
+	}
 }
 
 int main ()
 {
-	gr_init (600, 1300);
-	while (game ());
-	return 0;
+	gr_init (720, 1300);
+	setup1 ();
+	if (!repeatlevel ())
+		return 0;
+	setup2 ();
+	if (!repeatlevel ())
+		return 0;
+	setup3 ();
+	if (!repeatlevel ())
+		return 0;
 }
 
