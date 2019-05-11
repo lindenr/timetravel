@@ -3,6 +3,8 @@
 #include <math.h>
 
 const float blockwidth = 120, maxvel = 18;
+const float jumpvel = -16, const_grav = 0.8;
+const float movevel = 5;
 
 #define MAX_SIMULTANEOUS_KEYS 10
 
@@ -308,15 +310,15 @@ int next_player_state (struct LevelState *ls, struct PlayerState *ps)
 	// deal with input:
 	struct PlayerRecording *rec = &(ps->rec);
 	if (rec_isdown(rec, 'd'))
-		ps->plxv += 5;
+		ps->plxv += movevel;
 	if (rec_isdown(rec, 'a'))
-		ps->plxv -= 5;
+		ps->plxv -= movevel;
 	if (rec_isdown(rec, 'w') && ps->on_ground)
-		ps->plyv = -19;
+		ps->plyv = jumpvel;
 	if (rec_isdown_debounce(rec, '.'))
 		ls_lever (ls, b);
 	// adjust:
-	ps->plyv += 1; // gravity (positive y is downwards)
+	ps->plyv += const_grav; // gravity (positive y is downwards)
 	if (ps->plxv < -maxvel) ps->plxv = -maxvel;
 	if (ps->plxv >  maxvel) ps->plxv =  maxvel;
 	if (ps->plyv < -maxvel) ps->plyv = -maxvel;
@@ -327,7 +329,7 @@ int next_player_state (struct LevelState *ls, struct PlayerState *ps)
 	// collisions and input:
 	check_collisions (ps, ls);
 	int state = rec_finishframe (rec);
-	if (state == 3 && ls->level[b] != '*')
+	if (state == 3 && ls->level[b] != '*') // can only finish on goal square
 		state = 0;
 	return state;
 }
@@ -366,7 +368,7 @@ void draw_level (struct LevelState *ls)
 			continue;
 		for (y = 0; y < blockwidth; ++ y) for (x = 0; x < blockwidth; ++ x)
 		{
-			int X = L + x - ls->camx, Y = U + y - ls->camy;
+			int X = x + (int)(L - ls->camx), Y = y + (int)(U - ls->camy);
 			if (X < 0 || X >= gr_pw ||
 				Y < 0 || Y >= gr_ph)
 				continue;
@@ -380,7 +382,7 @@ void draw_level (struct LevelState *ls)
 			continue;
 		for (y = 0; y < 50; ++ y) for (x = 0; x < 50; ++ x)
 		{
-			int X = ps->plx + x - ls->camx, Y = ps->ply + y - ls->camy;
+			int X = x + (int) (ps->plx - ls->camx), Y = y + (int)(ps->ply - ls->camy);
 			if (X < 0 || X >= gr_pw ||
 				Y < 0 || Y >= gr_ph)
 				continue;
@@ -404,7 +406,7 @@ void new_player (struct LevelState *ls, const struct PlayerState *ps, int frame)
 /* return values:
  * -1: dead, restart level;
  * 0: quit entirely;
- * 1: playerless playback, and no players extant: success!
+ * 1: playerless playback, and no players extant: success! (or skip level)
  * 2: player time travelled back;
  * 3: player finished level */
 int run_through_from_start (struct LevelState *ls, int can_remote)
@@ -422,6 +424,8 @@ int run_through_from_start (struct LevelState *ls, int can_remote)
 			return 0; // quit
 		if (gr_is_pressed_debounce ('r'))
 			return -1; // reset
+		if (gr_is_pressed_debounce ('='))
+			return 1; // skip
 
 		// most recent player is currently player, camera follows them:
 		struct PlayerState *ps = v_at (ls->player_states, ls->player_states->len-1);
@@ -568,6 +572,27 @@ void setup3 ()
 	i_ply = 100;
 }
 
+void setup4 ()
+{
+	initlevel =
+	"aaaaaaaaaaa"
+	"aaaaaaaaaaa"
+	"aaaaaaaaal*"
+	"ggaaggggggg"
+	"ggssgggssgg"
+	"ggggggggggg";
+	control =
+	"00000000000"
+	"00000000000"
+	"00000000010"
+	"00110001100"
+	"00000000000"
+	"00000000000";
+	levelw = 11;
+	i_plx = 100;
+	i_ply = 100;
+}
+
 int playlevel ()
 {
 	struct LevelState *ls = ls_init (initlevel, control, levelw); // set up level
@@ -578,7 +603,7 @@ int playlevel ()
 	{
 		new_player (ls, &ips, 0); // make new player with given starting params
 		state = run_through_from_start (ls, 1); // play thru with all players
-		if (state <= 0) // -1 restart level, or 0 quit game
+		if (state <= 1) // -1 restart level; 0 quit game; 1 next level
 		{
 			ls_free (ls);
 			return state;
@@ -625,6 +650,9 @@ int main ()
 	if (!repeatlevel ())
 		return 0;
 	setup3 ();
+	if (!repeatlevel ())
+		return 0;
+	setup4 ();
 	if (!repeatlevel ())
 		return 0;
 }
