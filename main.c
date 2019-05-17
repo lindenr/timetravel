@@ -40,20 +40,30 @@ struct LevelState
 	int frame; // which frame (unused)
 	char *level, *initlevel; // current and inital state of level
 	char *ctrl; // what levers control what squares
+	char *cantravel; // can time travel in a given column
+	char *action; // how the levers behave
 	int levelw, levelh; // level dimensions
 	float camx, camy; // camera location (pixels)
 	Vector player_states; // all players' states
 };
 
-struct LevelState *ls_init (const char *level, const char *ctrl, int levelw)
+struct LevelState *ls_init (const char *level, const char *ctrl,
+	const char *cantravel, const char *action, int levelw)
 {
 	struct LevelState *ls = malloc (sizeof(struct LevelState));
 	int len = strlen(level);
-	*ls = (struct LevelState) {0, malloc(len+1), malloc(len+1), malloc(len+1), levelw, (len-1)/levelw + 1,
+	*ls = (struct LevelState) {0, malloc(len+1), malloc(len+1), malloc(len+1),
+		NULL, malloc(strlen(action)+1), levelw, (len-1)/levelw + 1,
 		0, 0, v_dinit (sizeof(struct PlayerState))};
 	strcpy (ls->level, level);
 	strcpy (ls->initlevel, level);
 	strcpy (ls->ctrl, ctrl);
+	if (cantravel)
+	{
+		ls->cantravel = malloc(levelw+1);
+		strcpy (ls->cantravel, cantravel);
+	}
+	strcpy (ls->action, action);
 	return ls;
 }
 
@@ -62,6 +72,9 @@ void ls_free (struct LevelState *ls)
 	free (ls->level);
 	free (ls->initlevel);
 	free (ls->ctrl);
+	if (ls->cantravel)
+		free (ls->cantravel);
+	free (ls->action);
 	int i;
 	for (i = 0; i < ls->player_states->len; ++ i)
 	{
@@ -262,39 +275,64 @@ void check_collisions (struct PlayerState *ps, struct LevelState *ls)
 	}
 }
 
-// toggle a lever with given id
-void ls_toggle_ctrl (struct LevelState *ls, char id)
+// activate a lever with given id
+void ls_use_ctrl (struct LevelState *ls, char id)
 {
 	int i;
 	char *level = ls->level;
 	char *ctrl = ls->ctrl;
 	// find all blocks in level under control of our lever
-	for (i = 0; ctrl[i]; ++ i)
+	if (ls->action[id-'1'] == 'f') // flip-flop
 	{
-		if (ctrl[i] != id) // only care about things under control
-			continue;
-		switch (level[i])
+		for (i = 0; ctrl[i]; ++ i)
 		{
-			// swap air with ground, and on-lever with off-lever
-			case 'a': level[i] = 'g'; break;
-			case 'g': level[i] = 'a'; break;
-			case 'l': level[i] = 'L'; break;
-			case 'L': level[i] = 'l'; break;
+			if (ctrl[i] != id) // only care about things under control
+				continue;
+			switch (level[i])
+			{
+				// swap air with ground, and on-lever with off-lever
+				case 'a': level[i] = 'g'; break;
+				case 'g': level[i] = 'a'; break;
+				case 'l': level[i] = 'L'; break;
+				case 'L': level[i] = 'l'; break;
+			}
+		}
+	}
+	else if (ls->action[id-'1'] == 'p') // permanent
+	{
+		for (i = 0; ctrl[i]; ++ i)
+		{
+			if (ctrl[i] == '0')
+				continue;
+			if (ctrl[i] == (id^3))
+			{
+				if (level[i] == 'a')
+					level[i] = 'g';
+				else if (level[i] == 'l')
+					level[i] = 'L';
+			}
+			else if (ctrl[i] == id)
+			{
+				if (level[i] == 'g')
+					level[i] = 'a';
+				else if (level[i] == 'L')
+					level[i] = 'l';
+			}
 		}
 	}
 }
 
-// toggle a lever at a location
+// attempt to activate a lever at a location
 void ls_lever (struct LevelState *ls, int b)
 {
 	char *level = ls->level;
 	char *ctrl = ls->ctrl;
 	if (level[b] != 'l' && level[b] != 'L')
 		return;
-	ls_toggle_ctrl (ls, ctrl[b]);
+	ls_use_ctrl (ls, ctrl[b]);
 }
 
-/* moves player/toggles levers etc according to input, then adjusts for collisions and finishes input
+/* moves player/activates levers etc according to input, then adjusts for collisions and finishes input
  * return values:
  * -1: dead or paradox, complete restart;
  * 0: normal, continue;
@@ -330,6 +368,8 @@ int next_player_state (struct LevelState *ls, struct PlayerState *ps)
 	check_collisions (ps, ls);
 	int state = rec_finishframe (rec);
 	if (state == 3 && ls->level[b] != '*') // can only finish on goal square
+		state = 0;
+	else if (state == 2 && ls->cantravel && ls->cantravel[b%ls->levelw] == '0')
 		state = 0;
 	return state;
 }
@@ -416,9 +456,9 @@ int run_through_from_start (struct LevelState *ls, int can_remote)
 		if (can_remote)
 		{
 			if (gr_is_pressed_debounce ('1'))
-				ls_toggle_ctrl (ls, '1');
+				ls_use_ctrl (ls, '1');
 			if (gr_is_pressed_debounce ('2'))
-				ls_toggle_ctrl (ls, '2');
+				ls_use_ctrl (ls, '2');
 		}
 		if (gr_is_pressed_debounce (GRK_ESC))
 			return 0; // quit
@@ -482,7 +522,7 @@ void ps_reset (struct PlayerState *ps)
 	ps->extant = 1;
 }
 
-const char *initlevel, *control;
+const char *initlevel, *control, *cantravel, *action;
 int levelw;
 float i_plx, i_ply;
 
@@ -502,6 +542,7 @@ void setup0 ()
 	"001100"
 	"000000"
 	"000000";
+	cantravel = NULL;
 	levelw = 6;
 	i_plx = 100;
 	i_ply = 100;
@@ -523,6 +564,32 @@ void setup1 ()
 	"00110002200"
 	"00000000000"
 	"00000000000";
+	cantravel = NULL;
+	action = "ff";
+	levelw = 11;
+	i_plx = 100;
+	i_ply = 100;
+}
+
+void setuptoby ()
+{
+	initlevel =
+	"aaaaaaaaaaa"
+	"aaaaaaaaaaa"
+	"aLaaaaaaal*"
+	"gggggggaagg"
+	"ggssgggssgg"
+	"ggggggggggg";
+	control =
+	"00000000000"
+	"00000000000"
+	"01000000020"
+	"00110002200"
+	"00000000000"
+	"00000000000";
+	cantravel =
+	"00110001111";
+	action = "pp";
 	levelw = 11;
 	i_plx = 100;
 	i_ply = 100;
@@ -546,6 +613,8 @@ void setup2 ()
 	"0002000001100"
 	"0000000000000"
 	"0000000000000";
+	cantravel = NULL;
+	action = "ff";
 	levelw = 13;
 	i_plx = 50;
 	i_ply = 220;
@@ -567,6 +636,8 @@ void setup3 ()
 	"00110001100"
 	"00000000000"
 	"00000000000";
+	cantravel = NULL;
+	action = "ff";
 	levelw = 11;
 	i_plx = 100;
 	i_ply = 100;
@@ -588,6 +659,8 @@ void setup4 ()
 	"00110001100"
 	"00000000000"
 	"00000000000";
+	cantravel = NULL;
+	action = "ff";
 	levelw = 11;
 	i_plx = 100;
 	i_ply = 100;
@@ -595,7 +668,7 @@ void setup4 ()
 
 int playlevel ()
 {
-	struct LevelState *ls = ls_init (initlevel, control, levelw); // set up level
+	struct LevelState *ls = ls_init (initlevel, control, cantravel, action, levelw); // set up level
 	struct PlayerState ips = {i_plx, i_ply, 0, 0, }; // initial player pos+vel
 
 	int state = 0;
@@ -640,9 +713,10 @@ int repeatlevel ()
 int main ()
 {
 	gr_init (720, 1300);
-	setup0 ();
+	setuptoby ();
 	if (!repeatlevel ())
 		return 0;
+	//return 0;
 	setup1 ();
 	if (!repeatlevel ())
 		return 0;
