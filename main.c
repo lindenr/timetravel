@@ -526,6 +526,52 @@ const char *initlevel, *control, *cantravel, *action;
 int levelw;
 float i_plx, i_ply;
 
+void setup_2 ()
+{
+	initlevel =
+	"aaaaa"
+	"aaaaa"
+	"aaaa*"
+	"ggagg"
+	"ggsgg"
+	"ggggg";
+	control =
+	"00000"
+	"00000"
+	"00000"
+	"00000"
+	"00000"
+	"00000";
+	cantravel = NULL;
+	action = "";
+	levelw = 5;
+	i_plx = 100;
+	i_ply = 100;
+}
+
+void setup_1 ()
+{
+	initlevel =
+	"aaaaaa"
+	"aaaaaa"
+	"alaaa*"
+	"ggaagg"
+	"ggssgg"
+	"gggggg";
+	control =
+	"000000"
+	"000000"
+	"010000"
+	"001100"
+	"000000"
+	"000000";
+	cantravel = NULL;
+	action = "f";
+	levelw = 6;
+	i_plx = 100;
+	i_ply = 100;
+}
+
 void setup0 ()
 {
 	initlevel =
@@ -543,6 +589,7 @@ void setup0 ()
 	"000000"
 	"000000";
 	cantravel = NULL;
+	action = "f";
 	levelw = 6;
 	i_plx = 100;
 	i_ply = 100;
@@ -713,22 +760,15 @@ int repeatlevel ()
 int main ()
 {
 	gr_init (720, 1300);
-	setuptoby ();
-	if (!repeatlevel ())
-		return 0;
-	//return 0;
-	setup1 ();
-	if (!repeatlevel ())
-		return 0;
-	setup2 ();
-	if (!repeatlevel ())
-		return 0;
-	setup3 ();
-	if (!repeatlevel ())
-		return 0;
-	setup4 ();
-	if (!repeatlevel ())
-		return 0;
+	void (*setups[]) (void) = {setup_2, setup_1, setup0, setup1, setuptoby, setup2, setup3, setup4};
+	int i;
+	for (i = 0; i < sizeof(setups)/sizeof(*setups); ++ i)
+	{
+		setups[i]();
+		if (!repeatlevel ())
+			return 0;
+	}
+	return 0;
 }
 
 /* vim: set noexpandtab ts=4 sts=4 sw=4 : */
